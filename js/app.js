@@ -23,6 +23,7 @@ function recordActivity(message){state.activity.unshift([team().name,message]);s
 function changeBet(id,delta){if(window.rouletteGame?.active)return window.rouletteGame.changeBet(id,delta);if(state.status!=='betting')return toast('Bets are locked');const t=team(),index=t.bets.findIndex(b=>makeBetId(b)===id);if(index<0)return;if(delta>0&&t.funds<delta)return toast('Not enough team funds');const bet=t.bets[index],change=delta>0?delta:Math.min(state.chipValue,bet.amount);if(delta<0){bet.amount-=change;t.funds+=change;if(!bet.amount)t.bets.splice(index,1)}else{bet.amount+=change;t.funds-=change}recordActivity(`${delta>0?'increased':'reduced'} ${labelBet(bet)} by ${money(change)}`);renderBets();renderScore();renderBoard()}
 function colorOf(n){return RED_NUMBERS.has(n)?'RED':'BLACK'}
 function stablePocketOffset(key){let hash=2166136261;for(let i=0;i<key.length;i++){hash^=key.charCodeAt(i);hash=Math.imul(hash,16777619)}return ((hash>>>0)/4294967296)*9-4.5}
+function compactBetAmount(amount){return new Intl.NumberFormat('en',{notation:'compact',maximumFractionDigits:1}).format(Number(amount)).replace(/K$/,'k')}
 function setStatus(status){state.status=status;const labels={waiting:'Waiting for admin',betting:'Betting open',locked:'Bets locked',spinning:'Wheel spinning',result:'Result'}; $('statusText').textContent=labels[status];$('adminStatus').textContent=status.toUpperCase();$('lockBtn').textContent=status==='betting'?'LOCK BETS':'LOCK BETS';$('timerLabel').textContent=status==='betting'?'OPEN':status==='waiting'?'WAITING':'LOCKED';$('displayStatusText').textContent=labels[status].toUpperCase();renderTimer()}
 function startBetting(){if(window.rouletteGame?.active)return window.rouletteGame.startBetting();if(state.status!=='waiting'&&state.status!=='result')return toast('Round is already active');clearWheelResult();startWheelSpin();setStatus('betting');timerSeconds=60;clearInterval(timerHandle);timerHandle=setInterval(()=>{timerSeconds--;renderTimer();if(timerSeconds<=0){clearInterval(timerHandle);lock();setTimeout(spin,450)}},1000);toast('Betting opened')}
 function lock(){if(window.rouletteGame?.active)return window.rouletteGame.lock();if(state.status==='betting'){clearInterval(timerHandle);setStatus('locked')}else toast('Betting is not open')}
@@ -146,9 +147,10 @@ function renderBoard(){
   const key=(type,numbers)=>`${type}:${[...numbers].sort((a,b)=>a-b).join(',')}`;
   const addMarker=(host,bet)=>{
     let holder=host.querySelector('.boardBetMarkers');
-    if(!holder){holder=document.createElement('span');holder.className='boardBetMarkers';host.append(holder)}
-    const marker=document.createElement('span');marker.className='boardBetMarker';marker.style.setProperty('--team-bet-color',colorFor(bet.teamId));
-    marker.textContent='$'+bet.amount;marker.title=`${bet.teamName}: $${bet.amount}`;holder.append(marker);
+    if(!holder){holder=document.createElement('span');holder.className='boardBetMarkers'+(host.classList.contains('boardCell')?' cellBetMarkers':'');host.append(holder)}
+    const position=Math.min(holder.children.length,3);
+    const marker=document.createElement('span');marker.className=`boardBetMarker teamMarker${position}`;marker.style.setProperty('--team-bet-color',colorFor(bet.teamId));
+    marker.textContent=compactBetAmount(bet.amount);marker.title=`${bet.teamName}: $${Number(bet.amount).toLocaleString()}`;holder.append(marker);
   };
   for(let row=0;row<3;row++)for(let col=0;col<12;col++){
     const n=col*3+(row===0?3:row===1?2:1),wrap=document.createElement('div');
@@ -186,7 +188,7 @@ const outside=[['red','RED'],['black','BLACK'],['odd','ODD'],['even','EVEN'],['l
 const outsideGrid=$('outsideGrid');outsideGrid.replaceChildren();
 outside.forEach(([type,label,value])=>{const button=document.createElement('button');button.type='button';button.className=`outside ${type==='red'?'red':''} ${type==='black'?'black':''}`;button.textContent=label;
   const matching=allBets.filter(b=>b.type===type&&(!value||b.value===value));
-  if(matching.length){const holder=document.createElement('span');holder.className='outsideBetMarks';for(const bet of matching){const mark=document.createElement('i');mark.style.background=colorFor(bet.teamId);mark.textContent=`${bet.teamName}: $${bet.amount}`;holder.append(mark)}button.append(holder)}
+  if(matching.length){button.classList.add('hasBetMarks');const holder=document.createElement('span');holder.className='outsideBetMarks';for(const bet of matching){const mark=document.createElement('i');mark.style.background=colorFor(bet.teamId);mark.textContent=`$${Number(bet.amount).toLocaleString()}`;mark.title=`${bet.teamName}: $${Number(bet.amount).toLocaleString()}`;holder.append(mark)}button.append(holder)}
   button.onclick=()=>placeBet({type,value,numbers:numbersFor(type,value)},label);outsideGrid.append(button)});
 renderTimer()}
 function show(view){$('playerView').classList.toggle('hide',view!=='player');$('adminView').classList.toggle('show',view==='admin');$('displayView').classList.toggle('show',view==='display');document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));$(view==='player'?'playerTab':view==='admin'?'adminTab':'displayTab').classList.add('active')}

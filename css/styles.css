@@ -126,7 +126,26 @@ main{max-width:1320px;margin:auto;padding:28px}.grid,.adminGrid{display:grid;gri
 .outsideBetMarks i{max-width:48%;overflow:hidden;padding:1px 3px;border-radius:999px;color:#101318;font-size:7px;font-style:normal;font-weight:800;line-height:1.1;text-overflow:ellipsis;white-space:nowrap}
 .teamLimitNote{margin:4px 0;color:var(--gold);font-size:13px;line-height:1.45}
 .teamDeleteBtn{border-color:#63373a;background:#281619;color:#f1c5c7}
-@media(max-width:760px){.liveManageRow{grid-template-columns:minmax(0,1fr) auto auto auto!important}.liveManageRow .btn{padding:7px 8px;font-size:10px}.liveManageRow .teamDeleteBtn{grid-column:4;grid-row:2}.liveManageRow strong{grid-column:2;grid-row:1}.liveManageRow>span{grid-column:1;grid-row:1}.liveManageRow button:nth-of-type(1){grid-column:1;grid-row:2}.liveManageRow button:nth-of-type(2){grid-column:2;grid-row:2}.liveManageRow button:nth-of-type(3){grid-column:3;grid-row:2}}
+@media(max-width:760px){.liveManageRow .btn{padding:7px 8px;font-size:10px}}
+
+.liveManageRow{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.adminTeamIdentity{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+.adminTeamName{min-width:0;overflow-wrap:anywhere;color:var(--text);font-size:14px}
+.adminTeamFunds{flex:0 0 auto;font-size:14px;white-space:nowrap}
+.adminTeamActions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.adminTeamActions .btn{min-width:0;padding:9px 6px;font-size:11px;line-height:1.15;white-space:normal}
+.boardBetMarkers{display:grid;grid-template-columns:repeat(2,max-content);justify-content:end;gap:2px;max-width:none}
+.hitTarget .boardBetMarkers{top:50%;right:auto;left:50%;transform:translate(-50%,-50%);justify-content:center}
+.cellBetMarkers{inset:0;display:block}
+.cellBetMarkers .boardBetMarker{position:absolute;height:10px;padding:0 2px;font-size:6px;line-height:1}
+.cellBetMarkers .teamMarker0{top:1px;right:1px}
+.cellBetMarkers .teamMarker1{top:1px;left:1px}
+.cellBetMarkers .teamMarker2{bottom:1px;right:1px}
+.cellBetMarkers .teamMarker3{bottom:1px;left:1px}
+.outside.hasBetMarks{min-height:48px;padding-bottom:24px}
+.outsideBetMarks{display:grid;grid-template-columns:repeat(2,max-content);justify-content:center;align-content:end;gap:2px;max-height:24px;overflow:visible}
+.outsideBetMarks i{max-width:none;overflow:visible;padding:1px 3px;font-size:7px;text-overflow:clip}
+@media(max-width:520px){.adminTeamActions{grid-template-columns:repeat(2,minmax(0,1fr))}.adminTeamActions .btn{font-size:12px}}
 
 /* Landscape phones have room for a side-by-side table; keep portrait and desktop unchanged. */
 @media(orientation:landscape) and (max-height:600px) and (max-width:1100px){

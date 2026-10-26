@@ -201,10 +201,15 @@
         const subtract = document.createElement('button');
         const setBalance = document.createElement('button');
         const remove = document.createElement('button');
-        row.className = 'manageRow liveManageRow';
-        row.style.gridTemplateColumns = 'minmax(0,1fr) auto repeat(4, auto)';
+        const identity = document.createElement('div');
+        const actions = document.createElement('div');
+        row.className = 'liveManageRow';
+        identity.className = 'adminTeamIdentity';
+        actions.className = 'adminTeamActions';
         name.textContent = team.name;
+        name.className = 'adminTeamName';
         funds.textContent = chip(app.visibleFunds(team));
+        funds.className = 'adminTeamFunds';
         add.type = subtract.type = 'button';
         add.className = subtract.className = 'btn';
         setBalance.type = remove.type = 'button';
@@ -218,7 +223,9 @@
         subtract.addEventListener('click', () => this.adjust(team.id, -100));
         setBalance.addEventListener('click', () => this.setBalance(team));
         remove.addEventListener('click', () => this.deleteTeam(team));
-        row.append(name, funds, add, subtract, setBalance, remove);
+        identity.append(name, funds);
+        actions.append(add, subtract, setBalance, remove);
+        row.append(identity, actions);
         root.append(row);
 
         const members = (this.snapshot?.members || []).filter((member) => member.team_id === team.id);
