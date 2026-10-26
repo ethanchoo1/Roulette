@@ -6,23 +6,23 @@ This page explains where the app runs, where game data lives, and how a player a
 
 ```mermaid
 flowchart LR
-    Player[Player or admin browser]
-    GitHub[GitHub repository]
-    Pages[Cloudflare Pages<br/>static site and CDN]
-    Auth[Supabase Auth<br/>guest sessions and admin sign-in]
-    API[Supabase API<br/>RPC endpoints and access checks]
-    DB[(Supabase Postgres<br/>events, teams, bets, rounds, ledger)]
-    Cron[Supabase Cron<br/>pg_cron scheduler]
-    Worker[system_advance_rounds()<br/>database transaction]
+    Player["Player or admin browser"]
+    GitHub["GitHub repository"]
+    Pages["Cloudflare Pages - static site and CDN"]
+    Auth["Supabase Auth - guest sessions and admin sign-in"]
+    API["Supabase API - RPC endpoints and access checks"]
+    DB[("Supabase Postgres - game data and ledger")]
+    Cron["Supabase Cron - pg_cron scheduler"]
+    Worker["Database round worker"]
 
     GitHub -->|connected branch deploy| Pages
     Pages -->|HTML, CSS, JavaScript| Player
-    Player <-->|sign-in and session| Auth
-    Player <-->|snapshots and game RPCs| API
-    API <-->|RLS, validation, transactions| DB
-    Cron -->|about once per second while enabled| Worker
-    Worker -->|locks expired rounds, picks result, pays bets| DB
-    DB -. optional Realtime hints .-> Player
+    Player <--> Auth
+    Player <--> API
+    API <--> DB
+    Cron --> Worker
+    Worker --> DB
+    DB -.-> Player
 ```
 
 ## What each service does
@@ -56,18 +56,18 @@ The browser uses the project URL and public/publishable key from `js/supabase-co
 ```mermaid
 sequenceDiagram
     participant B as Browser
-    participant A as Supabase Auth
-    participant S as Supabase RPC/API
+    participant A as Auth
+    participant S as Supabase API
     participant D as Postgres
-    participant C as Supabase Cron
+    participant C as Cron scheduler
 
     B->>A: Create/restore guest session or sign in admin
     B->>S: Validate invite code and request join options
     B->>S: Join existing team or create one
-    S->>D: Check event and membership; update transactionally
+    S->>D: Check event and membership and update transactionally
     B->>S: Read game snapshot and submit bet RPCs
-    S->>D: Validate round, team funds, bet, deadline; update bet and ledger
-    C->>D: Call system_advance_rounds()
+    S->>D: Validate round, team funds, and deadline then update bet and ledger
+    C->>D: Run the round worker
     D->>D: Lock round, select official result, settle winning bets
     B->>S: Poll snapshot (Realtime can also hint that data changed)
     S->>D: Return current round, teams, balances, bets, and activity
