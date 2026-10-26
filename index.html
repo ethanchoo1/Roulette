@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Roulette</title>
-<link rel="stylesheet" href="css/styles.css?v=20261021-10">
+<link rel="stylesheet" href="css/styles.css?v=20261026-1">
 </head>
 <body>
 <div class="app">
@@ -40,9 +40,12 @@
       <form id="teamChoiceForm" class="connectForm">
         <label for="teamChoice">Join an existing team</label>
         <select id="teamChoice"></select>
-        <div class="orDivider">or create a team</div>
-        <label for="newTeamNameInput">New team name</label>
-        <input id="newTeamNameInput" maxlength="32" placeholder="For example, Gold Team">
+        <div id="teamCreationArea">
+          <div class="orDivider">or create a team</div>
+          <label for="newTeamNameInput">New team name</label>
+          <input id="newTeamNameInput" maxlength="32" placeholder="For example, Gold Team">
+        </div>
+        <p id="teamLimitNote" class="teamLimitNote" hidden>All four teams have been created. Choose an existing team to join.</p>
         <button class="btn primary" type="submit">JOIN EVENT</button>
       </form>
     </div>
@@ -71,7 +74,7 @@
 <div>
 <div class="card betPanel"><div class="cardhead"><div><div class="eyebrow">Your team</div><h2 id="teamPanelName">BLUE TEAM</h2></div><div class="balance" id="balance">$1,240 <span>available</span></div></div><div class="teamrow"><div class="teamName"><i class="swatch"></i><span id="playerCountLabel">5 players online</span></div><span class="tag">shared bankroll</span></div><div class="bets" id="bets"></div></div>
 <div class="card activity"><div class="cardhead"><h2>Team activity</h2><span class="eyebrow">live</span></div><div class="activityList" id="activity"></div></div>
-<div class="card boardCard"><div class="cardhead"><div><div class="eyebrow">Casino table</div><h2>Place your bets</h2></div><span class="tag">1–36 • EVEN GAME</span></div><div class="rouletteBoard"><div class="betTimer"><div><div class="eyebrow">Betting window</div><b id="timerLabel">OPEN</b></div><div class="timerValue" id="timerValue">60</div></div><div class="chipTray" id="chipTray" role="group" aria-label="Select chip value"></div><div class="tableGrid" id="tableGrid"></div><div class="outsideGrid" id="outsideGrid"></div><div class="betHint" id="betHint">Select a chip, then choose a number or bet area.</div></div></div>
+<div class="card boardCard"><div class="cardhead"><div><div class="eyebrow">Casino table</div><h2>Place your bets</h2></div><span class="tag">1–36 • EVEN GAME</span></div><div class="rouletteBoard"><div class="betTimer"><div><div class="eyebrow">Betting window</div><b id="timerLabel">OPEN</b></div><div class="timerValue" id="timerValue">60</div></div><div class="chipTray" id="chipTray" role="group" aria-label="Select chip value"></div><div id="teamBetLegend" class="teamBetLegend" aria-label="Team bet colors"></div><div class="tableGrid" id="tableGrid"></div><div class="outsideGrid" id="outsideGrid"></div><div class="betHint" id="betHint">Select a chip, then choose a number or bet area.</div></div></div>
 </div>
 </div>
 </section>
@@ -81,7 +84,7 @@
 <div class="card"><div class="cardhead"><div><div class="eyebrow">Teams</div><h2>Bankrolls & players</h2></div></div><div class="teamManage" id="teamManage"></div></div>
 <div class="card activity adminActivityCard"><div class="cardhead"><h2>Recent event activity</h2><span class="eyebrow">live</span></div><div class="activityList" id="adminActivity"></div></div>
 </div>
-<div class="card roundControl" id="roundControl"><div class="cardhead"><h2>Round control</h2><span id="adminStatus" class="tag">WAITING</span></div><div class="form"><div class="controls left"><button class="btn primary" id="startBetting">START BETTING</button><button class="btn" id="adminLock">LOCK BETS</button><button class="btn" id="adminSpin">SPIN</button><button class="btn" id="nextRound">NEXT ROUND</button></div></div></div>
+<div class="card roundControl" id="roundControl"><div class="cardhead"><h2>Round control</h2><span id="adminStatus" class="tag">WAITING</span></div><div class="form"><div class="controls left"><button class="btn primary" id="startBetting">START BETTING</button><button class="btn" id="adminLock">LOCK BETS</button><button class="btn" id="adminSpin">SPIN</button><button class="btn" id="nextRound">NEXT ROUND</button><button class="btn" id="resetRoundCounter">RESET COUNTER TO ROUND 1</button></div></div></div>
 </section>
 <section id="displayView" class="display"><div class="stage"><div class="displayWheel"><div class="eyebrow">ROUND <span id="displayRound">4</span></div><div class="bigNumber" id="displayNumber">—</div><div class="bigLabel" id="displayLabel"></div><div class="displayStatus" id="displayStatusText">WAITING FOR ADMIN</div></div><div class="scoreboard" id="scoreboard"></div></div></section>
 </main>
@@ -90,8 +93,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/roulette.js"></script>
 <script src="js/supabase-config.js"></script>
-<script src="js/supabase-join.js?v=20261017-2"></script>
-<script src="js/app.js?v=20261021-21"></script>
-<script src="js/supabase-game.js?v=20261021-9"></script>
+<script src="js/supabase-join.js?v=20261026-1"></script>
+<script src="js/app.js?v=20261026-1"></script>
+<script src="js/supabase-game.js?v=20261026-1"></script>
 </body>
 </html>

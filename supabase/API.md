@@ -4,12 +4,12 @@ This document defines the Supabase backend boundary. The migrations create the s
 
 ## Data and access
 
-The schema is in `migrations/20261014000100_roulette_core.sql`.
+The schema starts in `migrations/20261014000100_roulette_core.sql`; follow-on migrations add guest joining, admin tools, and a separate displayed round counter.
 
 - `events`: single event configuration, including the server betting duration and legacy default chip value.
 - `teams`: event teams and authoritative available balance.
 - `event_members`: mapping from Supabase Auth users to a display name, team, and the `player` or `admin` role.
-- `rounds`: round number, state, server deadline, and official result.
+- `rounds`: permanent internal round number, displayed round number, state, server deadline, and official result.
 - `bets`: one row per team, round, bet kind, and canonical number set. `amount` is the accumulated stake; zero means the row has been fully removed and remains for audit history.
 - `team_ledger`: immutable bankroll changes for wagers, refunds, payouts, and admin adjustments.
 
@@ -19,11 +19,15 @@ All exposed tables have RLS enabled. Authenticated event members can read event 
 
 User-facing RPCs run transactionally, require an authenticated caller, return the updated rows or a game snapshot, and raise a stable error code on rejection. Mutation requests carry a client-generated `request_id` UUID so network retries cannot apply the same bankroll change twice. Repeating the same request returns its prior result; reusing its ID for a different operation is rejected.
 
-Stable rejection codes: `UNAUTHENTICATED`, `NOT_EVENT_MEMBER`, `ADMIN_REQUIRED`, `EVENT_NOT_ACTIVE`, `NO_ACTIVE_ROUND`, `INVALID_STATE`, `BETTING_CLOSED`, `INVALID_BET`, `INVALID_DELTA`, `INVALID_REQUEST`, `TEAM_REQUIRED`, `TEAM_NOT_FOUND`, `BET_NOT_FOUND`, `INSUFFICIENT_FUNDS`, `DUPLICATE_REQUEST`, `PAYOUT_OVERFLOW`, `JOIN_CLOSED_OR_INVALID`, `INVALID_DISPLAY_NAME`, `INVALID_TEAM_NAME`, `CHOOSE_OR_CREATE_TEAM`, `NAME_ALREADY_IN_USE`, `ADMIN_MEMBERSHIP_EXISTS`, `INVALID_KICK_TARGET`, and `PLAYER_NOT_FOUND`.
+Stable rejection codes: `UNAUTHENTICATED`, `NOT_EVENT_MEMBER`, `ADMIN_REQUIRED`, `EVENT_NOT_ACTIVE`, `NO_ACTIVE_ROUND`, `INVALID_STATE`, `ROUND_IN_PROGRESS`, `BETTING_CLOSED`, `INVALID_BET`, `INVALID_DELTA`, `INVALID_REQUEST`, `TEAM_REQUIRED`, `TEAM_NOT_FOUND`, `TEAM_HAS_ADMIN`, `TEAM_LIMIT_REACHED`, `BET_NOT_FOUND`, `INSUFFICIENT_FUNDS`, `DUPLICATE_REQUEST`, `PAYOUT_OVERFLOW`, `JOIN_CLOSED_OR_INVALID`, `INVALID_DISPLAY_NAME`, `INVALID_TEAM_NAME`, `CHOOSE_OR_CREATE_TEAM`, `NAME_ALREADY_IN_USE`, `ADMIN_MEMBERSHIP_EXISTS`, `INVALID_KICK_TARGET`, and `PLAYER_NOT_FOUND`.
 
 ### `admin_prepare_round(p_event_id uuid)`
 
-Admin only. Creates round 1 in `waiting`, or the next round after a prior `result`. Rejects if another round is active. Returns the new round.
+Admin only. Creates a `waiting` round with the next displayed number after a prior `result`. The internal round number remains unique and keeps increasing, even after the displayed counter is reset. Rejects if another round is active. Returns the new round.
+
+### `admin_reset_round_counter(p_event_id uuid)`
+
+Admin only. Sets the next displayed round to 1, reusing the current waiting round when possible or creating one after a result. Rejects while betting, locked, or spinning. Historical results and their displayed round labels remain unchanged.
 
 ### `admin_start_betting(p_event_id uuid)`
 
@@ -51,11 +55,21 @@ Service-only scheduled operation. Finds betting rounds whose database deadline h
 
 ### `admin_adjust_team_balance(p_event_id uuid, p_team_id uuid, p_delta bigint, p_reason text, p_request_id uuid)`
 
-Admin only. Applies a non-negative resulting balance and writes an `admin_adjustment` ledger row. It is the only bankroll setup/adjustment path after provisioning.
+Admin only. Applies a non-negative balance delta and writes an `admin_adjustment` ledger row.
+
+### `admin_set_team_balance(p_event_id uuid, p_team_id uuid, p_balance bigint, p_reason text, p_request_id uuid)`
+
+Admin only. Sets a team's available balance to an exact nonnegative whole-dollar amount and records the difference in the ledger. Rejected while betting, locked, or spinning.
+
+### `admin_delete_team(p_event_id uuid, p_team_id uuid)`
+
+Admin only. Deletes a team and its event memberships, bets, bankroll ledger entries, and associated activity history. Auth accounts remain, so those guests can join again. Admin memberships cannot be deleted this way. Rejected while betting, locked, or spinning.
+
+Team creation is limited to four teams per event; the database enforces the limit even if concurrent guests try to create teams at once.
 
 ### `get_game_snapshot(p_event_id uuid)`
 
-Authenticated event member. Returns the current round, teams and balances, current round's positive-stake bets, the caller's team membership, and up to eight recent join/bankroll/bet events. The member roster is populated only for admins. It never accepts a caller-supplied balance or result.
+Authenticated event member. Returns the current round, teams and balances, all teams' current-round positive-stake bets, the caller's team membership, and up to eight recent join/bankroll/bet events. The member roster is populated only for admins. It never accepts a caller-supplied balance or result.
 
 ### `get_join_options(p_join_code uuid)`
 

@@ -102,6 +102,9 @@
       const option = new Option(`${team.name} (${team.players} ${team.players === 1 ? 'player' : 'players'})`, team.id);
       select.add(option);
     }
+    const teamLimitReached = (data.teams || []).length >= 4;
+    $('teamCreationArea').hidden = teamLimitReached;
+    $('teamLimitNote').hidden = !teamLimitReached;
     $('joinEventName').textContent = data.event_name;
     $('newTeamNameInput').value = '';
     showView('teams');

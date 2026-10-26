@@ -116,6 +116,18 @@ main{max-width:1320px;margin:auto;padding:28px}.grid,.adminGrid{display:grid;gri
 .connectForm button:disabled,.btn:disabled{opacity:.55;cursor:wait}
 .connectGate[hidden],[hidden]{display:none!important}
 
+.teamBetLegend{display:flex;flex-wrap:wrap;gap:6px 12px;padding:0 2px 9px;color:var(--muted);font-size:10px}
+.teamBetLegendItem{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.teamBetDot{width:8px;height:8px;border-radius:50%;box-shadow:0 0 0 1px #fff6}
+.boardBetMarkers{position:absolute;z-index:7;top:2px;right:2px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:2px;max-width:calc(100% - 4px);pointer-events:none}
+.boardBetMarker{position:static;transform:none;min-width:0;height:13px;padding:0 3px;border-color:#fff9;background:var(--team-bet-color,var(--gold));color:#101318;font-size:7px}
+.outside{position:relative;padding:4px 2px 18px}
+.outsideBetMarks{position:absolute;left:2px;right:2px;bottom:2px;display:flex;justify-content:center;gap:2px;overflow:hidden;pointer-events:none}
+.outsideBetMarks i{max-width:48%;overflow:hidden;padding:1px 3px;border-radius:999px;color:#101318;font-size:7px;font-style:normal;font-weight:800;line-height:1.1;text-overflow:ellipsis;white-space:nowrap}
+.teamLimitNote{margin:4px 0;color:var(--gold);font-size:13px;line-height:1.45}
+.teamDeleteBtn{border-color:#63373a;background:#281619;color:#f1c5c7}
+@media(max-width:760px){.liveManageRow{grid-template-columns:minmax(0,1fr) auto auto auto!important}.liveManageRow .btn{padding:7px 8px;font-size:10px}.liveManageRow .teamDeleteBtn{grid-column:4;grid-row:2}.liveManageRow strong{grid-column:2;grid-row:1}.liveManageRow>span{grid-column:1;grid-row:1}.liveManageRow button:nth-of-type(1){grid-column:1;grid-row:2}.liveManageRow button:nth-of-type(2){grid-column:2;grid-row:2}.liveManageRow button:nth-of-type(3){grid-column:3;grid-row:2}}
+
 /* Landscape phones have room for a side-by-side table; keep portrait and desktop unchanged. */
 @media(orientation:landscape) and (max-height:600px) and (max-width:1100px){
   .top{height:auto;min-width:0;padding:8px 12px;gap:10px}

@@ -151,7 +151,7 @@
       const teamIndex = teams.findIndex((row) => row.id === snapshot.team_id);
       Object.assign(app.state, {
         event: snapshot.event,
-        round: round.round_number || 0,
+        round: round.display_round_number || round.round_number || 0,
         status: round.status || 'waiting',
         result: round.winning_number ?? null,
         bettingDeadline: round.betting_deadline || null,
@@ -160,8 +160,8 @@
         teams
       });
 
-      $('roundNo').textContent = round.round_number || '—';
-      $('displayRound').textContent = round.round_number || '—';
+      $('roundNo').textContent = round.display_round_number || round.round_number || '—';
+      $('displayRound').textContent = round.display_round_number || round.round_number || '—';
       document.querySelector('.betHint').textContent = `Selected chip: ${chip(app.state.chipValue)}. Choose a number or bet area.`;
       $('teamPanelName').textContent = teamIndex >= 0 ? `${teams[teamIndex].name} TEAM` : 'Event teams';
       $('playerCountLabel').textContent = 'shared team bankroll';
@@ -199,17 +199,26 @@
         const funds = document.createElement('strong');
         const add = document.createElement('button');
         const subtract = document.createElement('button');
+        const setBalance = document.createElement('button');
+        const remove = document.createElement('button');
         row.className = 'manageRow liveManageRow';
-        row.style.gridTemplateColumns = 'minmax(0,1fr) auto auto auto';
+        row.style.gridTemplateColumns = 'minmax(0,1fr) auto repeat(4, auto)';
         name.textContent = team.name;
         funds.textContent = chip(app.visibleFunds(team));
         add.type = subtract.type = 'button';
         add.className = subtract.className = 'btn';
+        setBalance.type = remove.type = 'button';
+        setBalance.className = 'btn';
+        remove.className = 'btn danger teamDeleteBtn';
         add.textContent = '+$100';
         subtract.textContent = '−$100';
+        setBalance.textContent = 'SET BALANCE';
+        remove.textContent = 'DELETE';
         add.addEventListener('click', () => this.adjust(team.id, 100));
         subtract.addEventListener('click', () => this.adjust(team.id, -100));
-        row.append(name, funds, add, subtract);
+        setBalance.addEventListener('click', () => this.setBalance(team));
+        remove.addEventListener('click', () => this.deleteTeam(team));
+        row.append(name, funds, add, subtract, setBalance, remove);
         root.append(row);
 
         const members = (this.snapshot?.members || []).filter((member) => member.team_id === team.id);
@@ -252,6 +261,37 @@
         p_event_id: this.context.eventId,
         p_user_id: member.user_id
       }), `${member.display_name} was removed. They can rejoin with the same browser identity.`);
+    },
+
+    setBalance(team) {
+      const raw = window.prompt(`Set ${team.name} team balance to an exact whole dollar amount:`, String(team.funds));
+      if (raw === null) return;
+      const amount = raw.trim();
+      if (!/^\d+$/.test(amount) || !Number.isSafeInteger(Number(amount))) {
+        return app.toast('Enter a nonnegative whole dollar amount.');
+      }
+      return this.action(async () => {
+        const { error } = await this.client.rpc('admin_set_team_balance', {
+          p_event_id: this.context.eventId,
+          p_team_id: team.id,
+          p_balance: Number(amount),
+          p_reason: 'Manual balance set',
+          p_request_id: crypto.randomUUID()
+        });
+        if (error) throw error;
+        await this.refresh();
+      }, `${team.name} balance set to ${chip(amount)}.`);
+    },
+
+    deleteTeam(team) {
+      const confirmed = window.confirm(
+        `Delete ${team.name}? This permanently deletes its event memberships, bets, bankroll ledger, and related activity history. Players keep their guest accounts and can rejoin another team. This is only allowed while no round is active.`
+      );
+      if (!confirmed) return;
+      return this.action(() => this.callAdmin('admin_delete_team', {
+        p_event_id: this.context.eventId,
+        p_team_id: team.id
+      }), `${team.name} was deleted.`);
     },
 
     subscribe() {
@@ -303,6 +343,16 @@
     next() {
       if (app.state.status !== 'result') return app.toast('Finish the current round first.');
       return this.action(() => this.callAdmin('admin_prepare_round', { p_event_id: this.context.eventId }), 'Next round is ready.');
+    },
+
+    resetRoundCounter() {
+      const confirmed = window.confirm(
+        'Start the displayed counter over at Round 1? The current waiting round will become Round 1, or a new one will be created after a result. Previous results and history will remain.'
+      );
+      if (!confirmed) return;
+      return this.action(() => this.callAdmin('admin_reset_round_counter', {
+        p_event_id: this.context.eventId
+      }), 'The next game is ready as Round 1.');
     },
 
     placeBet(spec) {
@@ -370,4 +420,5 @@
 
   window.rouletteGame = backend;
   $('enterTableBtn').addEventListener('click', () => backend.enter());
+  $('resetRoundCounter').addEventListener('click', () => backend.resetRoundCounter());
 })();

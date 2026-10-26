@@ -22,6 +22,7 @@ function renderScore(){const root=$('scoreboard');root.replaceChildren();for(con
 function recordActivity(message){state.activity.unshift([team().name,message]);state.activity=state.activity.slice(0,4);renderActivity()}
 function changeBet(id,delta){if(window.rouletteGame?.active)return window.rouletteGame.changeBet(id,delta);if(state.status!=='betting')return toast('Bets are locked');const t=team(),index=t.bets.findIndex(b=>makeBetId(b)===id);if(index<0)return;if(delta>0&&t.funds<delta)return toast('Not enough team funds');const bet=t.bets[index],change=delta>0?delta:Math.min(state.chipValue,bet.amount);if(delta<0){bet.amount-=change;t.funds+=change;if(!bet.amount)t.bets.splice(index,1)}else{bet.amount+=change;t.funds-=change}recordActivity(`${delta>0?'increased':'reduced'} ${labelBet(bet)} by ${money(change)}`);renderBets();renderScore();renderBoard()}
 function colorOf(n){return RED_NUMBERS.has(n)?'RED':'BLACK'}
+function stablePocketOffset(key){let hash=2166136261;for(let i=0;i<key.length;i++){hash^=key.charCodeAt(i);hash=Math.imul(hash,16777619)}return ((hash>>>0)/4294967296)*9-4.5}
 function setStatus(status){state.status=status;const labels={waiting:'Waiting for admin',betting:'Betting open',locked:'Bets locked',spinning:'Wheel spinning',result:'Result'}; $('statusText').textContent=labels[status];$('adminStatus').textContent=status.toUpperCase();$('lockBtn').textContent=status==='betting'?'LOCK BETS':'LOCK BETS';$('timerLabel').textContent=status==='betting'?'OPEN':status==='waiting'?'WAITING':'LOCKED';$('displayStatusText').textContent=labels[status].toUpperCase();renderTimer()}
 function startBetting(){if(window.rouletteGame?.active)return window.rouletteGame.startBetting();if(state.status!=='waiting'&&state.status!=='result')return toast('Round is already active');clearWheelResult();startWheelSpin();setStatus('betting');timerSeconds=60;clearInterval(timerHandle);timerHandle=setInterval(()=>{timerSeconds--;renderTimer();if(timerSeconds<=0){clearInterval(timerHandle);lock();setTimeout(spin,450)}},1000);toast('Betting opened')}
 function lock(){if(window.rouletteGame?.active)return window.rouletteGame.lock();if(state.status==='betting'){clearInterval(timerHandle);setStatus('locked')}else toast('Betting is not open')}
@@ -85,8 +86,8 @@ function settleWheel(number,resultKey){
   // Spin uses millisecond animation durations (900 ms / 680 ms), while this
   // deceleration calculation uses seconds. Convert the ball's rate to deg/s.
   const wheelSpeed=400,ballSpeed=360/0.680;
-  const pocketMid=(WHEEL_ORDER.indexOf(number)+.5)*10;
-  const phase=((ballStart-rotorStart-pocketMid)%360+360)%360;
+  const pocketTarget=(WHEEL_ORDER.indexOf(number)+.5)*10+stablePocketOffset(resultKey);
+  const phase=((ballStart-rotorStart-pocketTarget)%360+360)%360;
   // Keep the initial speed continuous, but ease the final pocket approach
   // over a longer, slower tail instead of extending the whole spin.
   const ballEaseStartSlope=3;
@@ -97,7 +98,7 @@ function settleWheel(number,resultKey){
   const lapCount=minLap<=maxLap?minLap+Math.floor(Math.random()*(maxLap-minLap+1)):Math.max(1,Math.round((9000/1000*decelerationDistanceRate-phase)/360));
   const duration=(phase+360*lapCount)/decelerationDistanceRate;
   const wheelDelta=wheelSpeed*duration/2,ballDelta=ballSpeed*duration/ballEaseStartSlope;
-  wheelMotion.landingAngle=((rotorStart+pocketMid+wheelDelta)%360+360)%360;
+  wheelMotion.landingAngle=((rotorStart+pocketTarget+wheelDelta)%360+360)%360;
   wheelMotion.wheelRotation=rotorStart+wheelDelta;
   wheelMotion.ballRotation=ballStart-ballDelta;
 
@@ -134,22 +135,33 @@ function clearWheelResult(){
   $('resultNum').textContent='—';$('displayNumber').textContent='—';$('displayLabel').textContent='—';
 }
 function renderBoard(){
-  const grid=$('tableGrid'),markerTargets=new Map(),bets=team().bets;
+  const grid=$('tableGrid'),markerTargets=new Map(),teams=state.teams;
+  const palette=['#5b8def','#e5a34b','#b36be0','#48b89a'];
+  const colorFor=(teamId)=>{const index=teams.findIndex(t=>t.id===teamId);return palette[Math.max(0,index)%palette.length]};
+  const allBets=teams.flatMap(t=>(t.bets||[]).map(b=>({...b,teamId:t.id,teamName:t.name})));
+  const legend=$('teamBetLegend');
+  legend.replaceChildren();
+  teams.forEach((t,index)=>{const item=document.createElement('span'),dot=document.createElement('i');item.className='teamBetLegendItem';dot.className='teamBetDot';dot.style.background=palette[index%palette.length];item.append(dot,document.createTextNode(t.name));legend.append(item)});
   grid.replaceChildren();
   const key=(type,numbers)=>`${type}:${[...numbers].sort((a,b)=>a-b).join(',')}`;
+  const addMarker=(host,bet)=>{
+    let holder=host.querySelector('.boardBetMarkers');
+    if(!holder){holder=document.createElement('span');holder.className='boardBetMarkers';host.append(holder)}
+    const marker=document.createElement('span');marker.className='boardBetMarker';marker.style.setProperty('--team-bet-color',colorFor(bet.teamId));
+    marker.textContent='$'+bet.amount;marker.title=`${bet.teamName}: $${bet.amount}`;holder.append(marker);
+  };
   for(let row=0;row<3;row++)for(let col=0;col<12;col++){
     const n=col*3+(row===0?3:row===1?2:1),wrap=document.createElement('div');
     wrap.className='boardCell';wrap.dataset.number=n;
     const button=document.createElement('button');button.className='num '+(RED_NUMBERS.has(n)?'red':'black');button.textContent=n;
     button.onclick=()=>placeBet({type:'straight',numbers:[n]},String(n));wrap.append(button);
-    const straight=bets.find(b=>b.type==='straight'&&b.numbers[0]===n);
-    if(straight){const mark=document.createElement('span');mark.className='chipMark';mark.textContent='$'+straight.amount;wrap.append(mark)}
+    for(const straight of allBets.filter(b=>b.type==='straight'&&b.numbers[0]===n))addMarker(wrap,straight);
     const topNeighbor=row===0?null:n+1,bottomNeighbor=row===2?null:n-1,leftNeighbor=col===0?null:n-3,rightNeighbor=col===11?null:n+3;
     const target=(cls,aria,fn,betKey)=>{
       const targetButton=document.createElement('button');targetButton.type='button';targetButton.className='hitTarget '+cls;
       targetButton.setAttribute('aria-label',aria);targetButton.title=aria;
       targetButton.onclick=e=>{e.stopPropagation();fn()};wrap.append(targetButton);
-      if(betKey)markerTargets.set(betKey,targetButton);
+      if(betKey){if(!markerTargets.has(betKey))markerTargets.set(betKey,targetButton);}
     };
     if(topNeighbor)target('edge topEdge',`Split ${n} and ${topNeighbor}`,()=>boundaryBet('split',n,topNeighbor),key('split',[n,topNeighbor]));
     if(bottomNeighbor)target('edge bottomEdge',`Split ${n} and ${bottomNeighbor}`,()=>boundaryBet('split',n,bottomNeighbor),key('split',[n,bottomNeighbor]));
@@ -165,14 +177,18 @@ function renderBoard(){
     if(row===1&&col<11){const nums=Array.from({length:6},(_,i)=>col*3+i+1);target('sixTarget',`Six-line ${nums[0]} through ${nums[5]}`,()=>placeBet({type:'six-line',numbers:nums}),key('six-line',nums));}
     grid.append(wrap);
   }
-  for(const bet of bets.filter(item=>['split','street','corner','six-line'].includes(item.type))){
+  for(const bet of allBets.filter(item=>['split','street','corner','six-line'].includes(item.type))){
     const markerTarget=markerTargets.get(key(bet.type,bet.numbers));if(!markerTarget)continue;
     markerTarget.classList.add('hasBetMarker');
-    const marker=document.createElement('span');marker.className='boardBetMarker';marker.textContent='$'+bet.amount;
-    markerTarget.append(marker);
+    addMarker(markerTarget,bet);
   }
 const outside=[['red','RED'],['black','BLACK'],['odd','ODD'],['even','EVEN'],['low','1–18'],['high','19–36'],['dozen','1st 12',1],['dozen','2nd 12',2],['dozen','3rd 12',3],['column','COL 1',1],['column','COL 2',2],['column','COL 3',3]];
-$('outsideGrid').innerHTML=outside.map(([type,label,value])=>`<button class="outside ${type==='red'?'red':''} ${type==='black'?'black':''}" data-type="${type}" ${value?`data-value="${value}"`:''}>${label}${team().bets.filter(b=>b.type===type&&(!value||b.value===value)).reduce((sum,b)=>sum+b.amount,0)?' · $'+team().bets.filter(b=>b.type===type&&(!value||b.value===value)).reduce((sum,b)=>sum+b.amount,0):''}</button>`).join('');$('outsideGrid').querySelectorAll('button').forEach(b=>b.onclick=()=>{const type=b.dataset.type,value=b.dataset.value?Number(b.dataset.value):undefined;placeBet({type,value,numbers:numbersFor(type,value)},b.textContent)});renderTimer()}
+const outsideGrid=$('outsideGrid');outsideGrid.replaceChildren();
+outside.forEach(([type,label,value])=>{const button=document.createElement('button');button.type='button';button.className=`outside ${type==='red'?'red':''} ${type==='black'?'black':''}`;button.textContent=label;
+  const matching=allBets.filter(b=>b.type===type&&(!value||b.value===value));
+  if(matching.length){const holder=document.createElement('span');holder.className='outsideBetMarks';for(const bet of matching){const mark=document.createElement('i');mark.style.background=colorFor(bet.teamId);mark.textContent=`${bet.teamName}: $${bet.amount}`;holder.append(mark)}button.append(holder)}
+  button.onclick=()=>placeBet({type,value,numbers:numbersFor(type,value)},label);outsideGrid.append(button)});
+renderTimer()}
 function show(view){$('playerView').classList.toggle('hide',view!=='player');$('adminView').classList.toggle('show',view==='admin');$('displayView').classList.toggle('show',view==='display');document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));$(view==='player'?'playerTab':view==='admin'?'adminTab':'displayTab').classList.add('active')}
 
 $('playerTab').onclick=()=>show('player');$('adminTab').onclick=()=>show('admin');$('displayTab').onclick=()=>show('display');$('spinBtn').onclick=spin;$('adminSpin').onclick=spin;$('lockBtn').onclick=lock;$('adminLock').onclick=lock;$('startBetting').onclick=startBetting;$('nextRound').onclick=next;
