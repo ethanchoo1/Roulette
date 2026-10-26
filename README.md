@@ -18,6 +18,8 @@ For the Supabase entry screen, open `http://localhost:8000/?join=YOUR_EVENT_JOIN
 
 ## Architecture and status
 
+For a system diagram and explanation of Cloudflare Pages, Supabase, browser sessions, database RPCs, and the round worker, see [docs/architecture.md](docs/architecture.md).
+
 The frontend is served as static files. `js/roulette.js` contains the shared roulette rules; `js/app.js` renders the table and chip tray; `js/supabase-join.js` restores guest/admin sessions and handles event/team entry; `js/supabase-game.js` reads shared snapshots and submits transactional bets and admin actions. Supabase owns bankrolls, rounds, results, and payouts. Snapshot polling keeps clients synchronized, with Realtime subscriptions as an additional update hint when enabled.
 
 The table supports zero-less 1–36 roulette, the official red mapping, structured inside and outside bets, boundary hit targets, selectable $1/$5/$25/$100/$500/$1,000 chips, and standard payouts. Inside bet amounts are marked at their board positions, and bankrolls are shared by team.
