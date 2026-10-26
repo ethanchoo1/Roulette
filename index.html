@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Roulette</title>
+<link rel="stylesheet" href="css/styles.css?v=20261021-10">
+</head>
+<body>
+<div class="app">
+<section id="connectGate" class="connectGate" aria-labelledby="connectTitle">
+  <div class="connectCard">
+    <div class="brand connectBrand"><div class="chip">R</div><div><b>ROULETTE</b><span> collaborative casino · single event</span></div></div>
+    <div id="connectFormView">
+      <p class="eyebrow">Guest entry</p>
+      <h1 id="connectTitle">Join your roulette event</h1>
+      <p class="connectIntro">Enter the event invite code and your display name. Your guest session is saved in this browser, so a refresh can restore your identity.</p>
+      <form id="guestStartForm" class="connectForm">
+        <label for="joinCodeInput">Event invite code</label>
+        <input id="joinCodeInput" autocomplete="off" placeholder="Paste the invite code" required>
+        <label for="displayNameInput">Your name</label>
+        <input id="displayNameInput" maxlength="32" autocomplete="nickname" placeholder="How should we show your name?" required>
+        <button class="btn primary" type="submit">CONTINUE AS GUEST</button>
+      </form>
+      <details class="adminSignIn">
+        <summary>Admin sign in</summary>
+        <form id="adminSignInForm" class="connectForm">
+          <label for="adminEmailInput">Email</label>
+          <input id="adminEmailInput" type="email" autocomplete="username" required>
+          <label for="adminPasswordInput">Password</label>
+          <input id="adminPasswordInput" type="password" autocomplete="current-password" required>
+          <button class="btn" type="submit">SIGN IN AS ADMIN</button>
+        </form>
+      </details>
+    </div>
+    <div id="teamChoiceView" hidden>
+      <p class="eyebrow">Team selection</p>
+      <h1 id="joinEventName">Join the event</h1>
+      <p class="connectIntro">Choose a team with room for you, or create a new team.</p>
+      <form id="teamChoiceForm" class="connectForm">
+        <label for="teamChoice">Join an existing team</label>
+        <select id="teamChoice"></select>
+        <div class="orDivider">or create a team</div>
+        <label for="newTeamNameInput">New team name</label>
+        <input id="newTeamNameInput" maxlength="32" placeholder="For example, Gold Team">
+        <button class="btn primary" type="submit">JOIN EVENT</button>
+      </form>
+    </div>
+    <div id="connectedView" hidden>
+      <p class="eyebrow">Supabase connection</p>
+      <h1 id="connectedTitle">You’re connected</h1>
+      <p id="connectedDetail" class="connectIntro"></p>
+      <p id="connectNote" class="connectNote">Your identity and membership are saved.</p>
+      <button id="enterTableBtn" class="btn primary connectEnter" type="button">ENTER THE TABLE</button>
+    </div>
+    <p id="connectMessage" class="connectMessage" role="status" aria-live="polite"></p>
+  </div>
+</section>
+<header class="top">
+  <div class="brand"><div class="chip">R</div><div><b>ROULETTE</b><span> collaborative casino • single event</span></div></div>
+  <nav class="tabs"><button id="playerTab" class="active">Player</button><button id="adminTab">Admin</button><button id="displayTab">Big Screen</button></nav>
+</header>
+<main>
+<section id="playerView" class="player">
+<div class="grid">
+<div class="card hero">
+  <div class="heroTop"><div><div class="eyebrow">Live table</div><h1>Roulette</h1></div><div><div class="round">Round <b id="roundNo">4</b></div><div class="status"><i class="dot"></i><span id="statusText">Betting open</span></div></div></div>
+  <div class="wheelWrap"><div class="wheel" id="wheel" role="img" aria-label="Roulette wheel"><div class="wheelRotor" id="wheelRotor"><svg class="wheelNumbers" id="wheelNumbers" viewBox="0 0 100 100" aria-hidden="true"></svg><div class="wheelInner" id="wheelInner"><div class="result isPending" id="resultBadge"><div><strong id="resultNum">—</strong></div></div></div></div><div class="wheelBallTrack" id="wheelBallTrack"><span class="wheelBall"></span></div></div><div class="pointer" id="wheelPointer" aria-hidden="true"></div></div>
+  <div class="controls"><button class="btn primary" id="spinBtn">SPIN WHEEL</button><button class="btn" id="lockBtn">LOCK BETS</button></div>
+</div>
+<div>
+<div class="card betPanel"><div class="cardhead"><div><div class="eyebrow">Your team</div><h2 id="teamPanelName">BLUE TEAM</h2></div><div class="balance" id="balance">$1,240 <span>available</span></div></div><div class="teamrow"><div class="teamName"><i class="swatch"></i><span id="playerCountLabel">5 players online</span></div><span class="tag">shared bankroll</span></div><div class="bets" id="bets"></div></div>
+<div class="card activity"><div class="cardhead"><h2>Team activity</h2><span class="eyebrow">live</span></div><div class="activityList" id="activity"></div></div>
+<div class="card boardCard"><div class="cardhead"><div><div class="eyebrow">Casino table</div><h2>Place your bets</h2></div><span class="tag">1–36 • EVEN GAME</span></div><div class="rouletteBoard"><div class="betTimer"><div><div class="eyebrow">Betting window</div><b id="timerLabel">OPEN</b></div><div class="timerValue" id="timerValue">60</div></div><div class="chipTray" id="chipTray" role="group" aria-label="Select chip value"></div><div class="tableGrid" id="tableGrid"></div><div class="outsideGrid" id="outsideGrid"></div><div class="betHint" id="betHint">Select a chip, then choose a number or bet area.</div></div></div>
+</div>
+</div>
+</section>
+<section id="adminView" class="admin">
+<div class="adminGrid">
+<div class="card"><div class="cardhead"><div><div class="eyebrow">Control room</div><h2>Game settings</h2></div><span class="tag">ADMIN</span></div><div class="form"><div class="field"><label>Current round</label><input id="adminRound" type="number" value="4" min="1"></div><div class="field"><label>Starting funds</label><input id="startFunds" type="number" value="1000" min="0" step="50"></div><div class="controls left"><button class="btn primary" id="applySettings">APPLY SETTINGS</button><button class="btn danger" id="resetBtn">RESET GAME</button></div></div></div>
+<div class="card"><div class="cardhead"><div><div class="eyebrow">Teams</div><h2>Bankrolls & players</h2></div></div><div class="teamManage" id="teamManage"></div></div>
+<div class="card activity adminActivityCard"><div class="cardhead"><h2>Recent event activity</h2><span class="eyebrow">live</span></div><div class="activityList" id="adminActivity"></div></div>
+</div>
+<div class="card roundControl" id="roundControl"><div class="cardhead"><h2>Round control</h2><span id="adminStatus" class="tag">WAITING</span></div><div class="form"><div class="controls left"><button class="btn primary" id="startBetting">START BETTING</button><button class="btn" id="adminLock">LOCK BETS</button><button class="btn" id="adminSpin">SPIN</button><button class="btn" id="nextRound">NEXT ROUND</button></div></div></div>
+</section>
+<section id="displayView" class="display"><div class="stage"><div class="displayWheel"><div class="eyebrow">ROUND <span id="displayRound">4</span></div><div class="bigNumber" id="displayNumber">—</div><div class="bigLabel" id="displayLabel"></div><div class="displayStatus" id="displayStatusText">WAITING FOR ADMIN</div></div><div class="scoreboard" id="scoreboard"></div></div></section>
+</main>
+<div id="toast" class="toast">Updated</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/roulette.js"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/supabase-join.js?v=20261017-2"></script>
+<script src="js/app.js?v=20261021-21"></script>
+<script src="js/supabase-game.js?v=20261021-9"></script>
+</body>
+</html>
