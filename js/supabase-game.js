@@ -156,7 +156,7 @@
         result: round.winning_number ?? null,
         bettingDeadline: round.betting_deadline || null,
         chipValue: app.state.chipValue || 25,
-        activeTeam: Math.max(0, teamIndex),
+        activeTeam: teamIndex,
         teams
       });
 
@@ -193,6 +193,13 @@
       const root = $('teamManage');
       root.replaceChildren();
       if (this.context.role !== 'admin') return;
+      if (!app.state.teams.length) {
+        const empty = document.createElement('div');
+        empty.className = 'emptyBets';
+        empty.textContent = 'No teams yet. Players can create a team when they join with the event invite.';
+        root.append(empty);
+        return;
+      }
       for (const team of app.state.teams) {
         const row = document.createElement('div');
         const name = document.createElement('span');
@@ -218,7 +225,10 @@
         add.textContent = '+$100';
         subtract.textContent = '−$100';
         setBalance.textContent = 'SET BALANCE';
-        remove.textContent = 'DELETE';
+        const protectedAdminTeam = team.id === this.snapshot?.team_id;
+        remove.textContent = protectedAdminTeam ? 'ADMIN TEAM' : 'DELETE';
+        remove.disabled = protectedAdminTeam;
+        remove.title = protectedAdminTeam ? 'A team assigned to an admin account cannot be deleted.' : 'Delete this team and its associated event data.';
         add.addEventListener('click', () => this.adjust(team.id, 100));
         subtract.addEventListener('click', () => this.adjust(team.id, -100));
         setBalance.addEventListener('click', () => this.setBalance(team));
