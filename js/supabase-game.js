@@ -162,7 +162,7 @@
 
       $('roundNo').textContent = round.display_round_number || round.round_number || '—';
       $('displayRound').textContent = round.display_round_number || round.round_number || '—';
-      document.querySelector('.betHint').textContent = `Selected chip: ${chip(app.state.chipValue)}. Choose a number or bet area.`;
+      app.updateBetHint();
       $('teamPanelName').textContent = teamIndex >= 0 ? `${teams[teamIndex].name} TEAM` : 'Event teams';
       $('playerCountLabel').textContent = 'shared team bankroll';
       if (['betting', 'locked', 'spinning'].includes(round.status)) {
@@ -376,19 +376,23 @@
       if (app.state.status !== 'betting') return app.toast('Bets are locked.');
       const currentTeam = app.team();
       if (!currentTeam) return app.toast('Join a team before betting.');
-      const chipValue = app.state.chipValue;
+      const allIn = app.state.allInSelected;
+      const chipValue = allIn ? currentTeam.funds : app.state.chipValue;
+      if (chipValue <= 0) return app.toast('Your team has no funds left to wager.');
       let bet;
       try { bet = Roulette.validateBet({ ...spec, amount: chipValue }); }
       catch (error) { return app.toast(error.message); }
       if (currentTeam.funds < chipValue) return app.toast('Not enough team funds.');
       return this.action(async () => {
-        const { error } = await this.client.rpc('member_change_bet', {
+        const rpcName = allIn ? 'member_bet_all_in' : 'member_change_bet';
+        const args = {
           p_event_id: this.context.eventId,
           p_bet_type: bet.type,
           p_numbers: bet.numbers,
-          p_delta: chipValue,
           p_request_id: crypto.randomUUID()
-        });
+        };
+        if (!allIn) args.p_delta = chipValue;
+        const { error } = await this.client.rpc(rpcName, args);
         if (error) throw error;
         await this.refresh();
       });

@@ -146,6 +146,9 @@ main{max-width:1320px;margin:auto;padding:28px}.grid,.adminGrid{display:grid;gri
 .outsideBetMarks{display:grid;grid-template-columns:repeat(2,max-content);justify-content:center;align-content:end;gap:2px;max-height:24px;overflow:visible}
 .outsideBetMarks i{max-width:none;overflow:visible;padding:1px 3px;font-size:7px;text-overflow:clip}
 @media(max-width:520px){.adminTeamActions{grid-template-columns:repeat(2,minmax(0,1fr))}.adminTeamActions .btn{font-size:12px}}
+.chipOption.chipAllIn{width:52px;flex:0 0 52px;border-style:solid;border-color:#f3d5d5;background:#7d2730;color:#fff;font-size:8px;letter-spacing:.02em}
+.chipOption.chipAllIn[aria-pressed="true"]{box-shadow:0 0 0 2px #fff,0 0 0 5px #d44a50,0 3px 8px #0009}
+@media(max-width:600px){.player .activityList{height:132px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin}}
 
 /* Landscape phones have room for a side-by-side table; keep portrait and desktop unchanged. */
 @media(orientation:landscape) and (max-height:600px) and (max-width:1100px){

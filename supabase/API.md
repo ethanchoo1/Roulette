@@ -41,6 +41,10 @@ Canonical bet type and number combinations are `straight`, `split`, `street`, `c
 
 Payouts use standard net odds and return the stake as part of the gross payout: straight 35:1, split 17:1, street 11:1, corner 8:1, six-line 5:1, dozen/column 2:1, and even-money 1:1. A losing stake remains debited; a winning bet credits `stake × (net odds + 1)` once.
 
+### `member_bet_all_in(p_event_id uuid, p_bet_type text, p_numbers integer[], p_request_id uuid)`
+
+Player or admin who belongs to a team. Places the team's entire remaining balance on one validated bet. The database locks the current round and team, checks the deadline and available balance, and updates the bet, bankroll, and ledger atomically. It is idempotent for request retries. The balance is shared, so any teammate using this option wagers all funds currently available to the team.
+
 ### `admin_lock_bets(p_event_id uuid)`
 
 Admin only. Transitions `betting` to `locked` immediately, including before the deadline if the admin closes betting early. Repeated calls while already locked return the existing round; other invalid transitions are rejected.
