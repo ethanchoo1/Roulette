@@ -3,6 +3,27 @@ const state={round:4,status:'waiting',result:17,activeTeam:0,chipValue:25,allInS
   {name:'BLUE',funds:1240,players:5,bets:[]},{name:'RED',funds:920,players:4,bets:[]},{name:'GREEN',funds:1350,players:6,bets:[]},{name:'GOLD',funds:1090,players:3,bets:[]}],
   activity:[['Sarah','joined BLUE team'],['Steve','joined BLUE team'],['Mike','joined BLUE team']]};
 const $=id=>document.getElementById(id), money=n=>'$'+n.toLocaleString();
+const sound={enabled:false,context:null,master:null};
+function audioContext(){
+  if(!sound.context){const AudioContext=window.AudioContext||window.webkitAudioContext;if(!AudioContext)return null;sound.context=new AudioContext();sound.master=sound.context.createGain();sound.master.gain.value=.22;sound.master.connect(sound.context.destination)}
+  if(sound.context.state==='suspended')sound.context.resume().catch(()=>{});
+  return sound.context;
+}
+function tone(ctx,frequency,start,duration,{wave='sine',volume=.3,endFrequency=null}={}){
+  const oscillator=ctx.createOscillator(),gain=ctx.createGain();oscillator.type=wave;oscillator.frequency.setValueAtTime(frequency,start);if(endFrequency)oscillator.frequency.exponentialRampToValueAtTime(endFrequency,start+duration);
+  gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(volume,start+.008);gain.gain.exponentialRampToValueAtTime(.0001,start+duration);
+  oscillator.connect(gain);gain.connect(sound.master);oscillator.start(start);oscillator.stop(start+duration+.02);
+}
+function playSound(effect){
+  if(!sound.enabled)return;const ctx=audioContext();if(!ctx)return;const now=ctx.currentTime;
+  if(effect==='chip'){tone(ctx,1900,now,.055,{wave:'triangle',volume:.24,endFrequency:1450});tone(ctx,2670,now+.018,.07,{wave:'sine',volume:.12,endFrequency:2100})}
+  else if(effect==='open'){tone(ctx,660,now,.16,{wave:'sine',volume:.2});tone(ctx,880,now+.13,.2,{wave:'sine',volume:.22})}
+  else if(effect==='lock'){tone(ctx,520,now,.12,{wave:'triangle',volume:.2,endFrequency:380});tone(ctx,350,now+.09,.15,{wave:'triangle',volume:.16,endFrequency:300})}
+  else if(effect==='spin'){tone(ctx,280,now,.3,{wave:'sawtooth',volume:.1,endFrequency:110});tone(ctx,420,now,.22,{wave:'triangle',volume:.08,endFrequency:180})}
+  else if(effect==='result'){[523,659,784].forEach((frequency,index)=>tone(ctx,frequency,now+index*.11,.32,{wave:'sine',volume:.18}))}
+  else if(effect==='win'){[659,784,988,1318].forEach((frequency,index)=>tone(ctx,frequency,now+index*.105,.38,{wave:'sine',volume:.2}))}
+}
+function setSoundEnabled(enabled){sound.enabled=enabled;const button=$('soundToggle');button.setAttribute('aria-pressed',String(enabled));button.setAttribute('aria-label',enabled?'Disable sound effects':'Enable sound effects');button.textContent=enabled?'SOUND ON':'SOUND OFF';if(enabled)audioContext()}
 const team=()=>state.teams[state.activeTeam];
 let heldBalanceKey=null,heldBalances=null,lastReleasedBalanceKey=null;
 const balanceKey=t=>t.id??t.name;
@@ -26,13 +47,13 @@ function colorOf(n){return RED_NUMBERS.has(n)?'RED':'BLACK'}
 function stablePocketOffset(key){let hash=2166136261;for(let i=0;i<key.length;i++){hash^=key.charCodeAt(i);hash=Math.imul(hash,16777619)}return ((hash>>>0)/4294967296)*9-4.5}
 function compactBetAmount(amount){return new Intl.NumberFormat('en',{notation:'compact',maximumFractionDigits:1}).format(Number(amount)).replace(/K$/,'k')}
 function setStatus(status){state.status=status;const labels={waiting:'Waiting for admin',betting:'Betting open',locked:'Bets locked',spinning:'Wheel spinning',result:'Result'}; $('statusText').textContent=labels[status];$('adminStatus').textContent=status.toUpperCase();$('lockBtn').textContent=status==='betting'?'LOCK BETS':'LOCK BETS';$('timerLabel').textContent=status==='betting'?'OPEN':status==='waiting'?'WAITING':'LOCKED';$('displayStatusText').textContent=labels[status].toUpperCase();renderTimer()}
-function startBetting(){if(window.rouletteGame?.active)return window.rouletteGame.startBetting();if(state.status!=='waiting'&&state.status!=='result')return toast('Round is already active');clearWheelResult();startWheelSpin();setStatus('betting');timerSeconds=60;clearInterval(timerHandle);timerHandle=setInterval(()=>{timerSeconds--;renderTimer();if(timerSeconds<=0){clearInterval(timerHandle);lock();setTimeout(spin,450)}},1000);toast('Betting opened')}
-function lock(){if(window.rouletteGame?.active)return window.rouletteGame.lock();if(state.status==='betting'){clearInterval(timerHandle);setStatus('locked')}else toast('Betting is not open')}
-function spin(){if(window.rouletteGame?.active)return window.rouletteGame.spin();if(state.status==='betting')lock();if(state.status!=='locked')return toast('Lock betting before spinning');setStatus('spinning');startWheelSpin();const n=1+Math.floor(Math.random()*36);state.result=n;setTimeout(()=>{const resultKey=`local:${state.round}:${n}`;holdSettlementBalances(resultKey);settleWheel(n,resultKey);state.status='result';setStatus('result');payout(n);toast('Result: '+n)},3100)}
+function startBetting(){if(window.rouletteGame?.active)return window.rouletteGame.startBetting();if(state.status!=='waiting'&&state.status!=='result')return toast('Round is already active');playSound('open');clearWheelResult();startWheelSpin();setStatus('betting');timerSeconds=60;clearInterval(timerHandle);timerHandle=setInterval(()=>{timerSeconds--;renderTimer();if(timerSeconds<=0){clearInterval(timerHandle);lock();setTimeout(spin,450)}},1000);toast('Betting opened')}
+function lock(){if(window.rouletteGame?.active)return window.rouletteGame.lock();if(state.status==='betting'){playSound('lock');clearInterval(timerHandle);setStatus('locked')}else toast('Betting is not open')}
+function spin(){if(window.rouletteGame?.active)return window.rouletteGame.spin();if(state.status==='betting')lock();if(state.status!=='locked')return toast('Lock betting before spinning');playSound('spin');setStatus('spinning');startWheelSpin();const n=1+Math.floor(Math.random()*36);state.result=n;setTimeout(()=>{const resultKey=`local:${state.round}:${n}`;holdSettlementBalances(resultKey);settleWheel(n,resultKey);state.status='result';setStatus('result');payout(n);toast('Result: '+n)},3100)}
 function payout(n){if(window.rouletteGame?.active)return;for(const t of state.teams){t.funds+=settleBets(t.bets,n);t.bets=[]}renderBets();renderActivity();renderTeams()}
 function next(){if(window.rouletteGame?.active)return window.rouletteGame.next();if(state.status!=='result')return toast('Finish the current round first');state.round++;$('roundNo').textContent=state.round;$('displayRound').textContent=state.round;clearWheelResult();setStatus('waiting');timerSeconds=60;renderTimer();toast('Ready for admin to open betting')}
 function adjust(i,amt){if(window.rouletteGame?.active)return window.rouletteGame.adjust(i,amt);state.teams[i].funds=Math.max(0,state.teams[i].funds+amt);renderBets();renderTeams()}
-function placeBet(spec,label){if(window.rouletteGame?.active)return window.rouletteGame.placeBet(spec,label);if(state.status!=='betting')return toast('Bets are locked');const t=team();if(!t)return toast('Join a team before betting');const amount=state.allInSelected?t.funds:state.chipValue;let bet;try{bet=validateBet({...spec,amount})}catch(e){return toast(e.message)}if(t.funds<amount)return toast('Not enough team funds');const id=makeBetId(bet),existing=t.bets.find(b=>makeBetId(b)===id);if(existing)existing.amount+=amount;else t.bets.push(bet);t.funds-=amount;recordActivity(`added ${money(amount)} to `+(label||labelBet(bet)));renderBets();renderScore();renderBoard()}
+function placeBet(spec,label){if(window.rouletteGame?.active)return window.rouletteGame.placeBet(spec,label);if(state.status!=='betting')return toast('Bets are locked');const t=team();if(!t)return toast('Join a team before betting');const amount=state.allInSelected?t.funds:state.chipValue;let bet;try{bet=validateBet({...spec,amount})}catch(e){return toast(e.message)}if(t.funds<amount)return toast('Not enough team funds');const id=makeBetId(bet),existing=t.bets.find(b=>makeBetId(b)===id);if(existing)existing.amount+=amount;else t.bets.push(bet);t.funds-=amount;playSound('chip');recordActivity(`added ${money(amount)} to `+(label||labelBet(bet)));renderBets();renderScore();renderBoard()}
 function boundaryBet(type,a,b){let nums=[a,b].sort((x,y)=>x-y);placeBet({type,numbers:nums})}
 function renderTimer(){$('timerValue').textContent=timerSeconds;$('timerValue').classList.toggle('locked',state.status!=='betting')}
 const wheelMotion={wheelRotation:0,ballRotation:0,spinning:false,wheelAnimation:null,ballAnimation:null,spinStartedAt:0,wheelBase:0,ballBase:0,resultKey:null,settleTimer:null,settleAnimationFrame:null,landingAngle:0};
@@ -67,6 +88,7 @@ function startWheelSpin(){
 }
 function settleWheel(number,resultKey){
   if(wheelMotion.resultKey===resultKey)return;
+  const winningTeamExists=state.teams.some(t=>settleBets(t.bets,number)>0);
   if(!wheelMotion.spinning)startWheelSpin();
   wheelMotion.resultKey=resultKey;const rotor=$('wheelRotor'),ball=$('wheelBallTrack'),badge=$('resultBadge');
   const color=colorOf(number);$('resultNum').textContent='—';$('displayNumber').textContent='—';$('displayLabel').textContent='';badge.classList.add('isPending');
@@ -115,6 +137,7 @@ function settleWheel(number,resultKey){
     if(wheelMotion.resultKey!==resultKey)return;
     badge.classList.toggle('isRed',color==='RED');badge.classList.toggle('isBlack',color==='BLACK');
     $('resultNum').textContent=String(number);badge.classList.remove('isPending');$('displayNumber').textContent=String(number);$('displayLabel').textContent=color;
+    playSound(winningTeamExists?'win':'result');
     positionWheelPointer(wheelMotion.landingAngle,true);
     clearTimeout(wheelMotion.settleTimer);wheelMotion.settleTimer=null;releaseSettlementBalances(resultKey);renderActivity();
   };
@@ -204,5 +227,6 @@ const repositionVisibleWheelPointer=()=>{
 };
 window.addEventListener('resize',repositionVisibleWheelPointer,{passive:true});
 window.addEventListener('orientationchange',repositionVisibleWheelPointer,{passive:true});
-window.rouletteApp={state,team,renderBets,renderActivity,renderTeams,renderScore,renderBoard,setStatus,renderTimer,updateBetHint,setTimer:(value)=>{timerSeconds=value;renderTimer()},visibleFunds,holdSettlementBalances,releaseSettlementBalances,startWheelSpin,settleWheel,clearWheelResult,toast,show};
+window.rouletteApp={state,team,renderBets,renderActivity,renderTeams,renderScore,renderBoard,setStatus,renderTimer,updateBetHint,setTimer:(value)=>{timerSeconds=value;renderTimer()},visibleFunds,holdSettlementBalances,releaseSettlementBalances,startWheelSpin,settleWheel,clearWheelResult,toast,show,playSound};
+if($('soundToggle'))$('soundToggle').onclick=()=>setSoundEnabled(!sound.enabled);
 renderChipTray();renderBets();renderActivity();renderTeams();renderBoard();wheelBackground();setStatus('waiting');

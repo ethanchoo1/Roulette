@@ -133,6 +133,15 @@
 
     render(snapshot) {
       const round = snapshot.round || {};
+      const status = round.status || 'waiting';
+      const roundKey = round.id || round.round_number || 'none';
+      if (this.lastSoundRoundKey === roundKey && this.lastSoundStatus !== status) {
+        if (status === 'betting') app.playSound('open');
+        else if (status === 'locked') app.playSound('lock');
+        else if (status === 'spinning') app.playSound('spin');
+      }
+      this.lastSoundRoundKey = roundKey;
+      this.lastSoundStatus = status;
       const settlementKey = round.winning_number != null ? `${round.id}:${round.winning_number}` : null;
       if (settlementKey) app.holdSettlementBalances(settlementKey);
       const teams = (snapshot.teams || []).map((row) => ({
@@ -395,6 +404,7 @@
         const { error } = await this.client.rpc(rpcName, args);
         if (error) throw error;
         await this.refresh();
+        app.playSound('chip');
       });
     },
 

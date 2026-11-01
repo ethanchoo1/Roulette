@@ -47,7 +47,7 @@ Supabase is both the **data source** and the app’s **backend**. “Backend” 
 
 ### Browser: renders the game and sends requests
 
-The browser runs the UI and roulette animation. It stores the authenticated session using Supabase’s browser client, requests snapshots, and sends user actions to Supabase. The visual countdown and animation are client-side, but betting deadlines, balances, winning numbers, and payouts are decided by the database.
+The browser runs the UI and roulette animation. It stores the authenticated session using Supabase’s browser client, requests snapshots, and sends user actions to Supabase. The visual countdown and animation are client-side, but betting deadlines, balances, winning numbers, and payouts are decided by the database. Optional sound effects are synthesized locally with the Web Audio API and can be enabled or muted with the header control; no audio assets or sound service are required.
 
 The browser uses the project URL and public/publishable key from `js/supabase-config.js`. A public key is intended for browser use; a Supabase service-role or database secret must never be placed in frontend files.
 
