@@ -3,27 +3,55 @@ const state={round:4,status:'waiting',result:17,activeTeam:0,chipValue:25,allInS
   {name:'BLUE',funds:1240,players:5,bets:[]},{name:'RED',funds:920,players:4,bets:[]},{name:'GREEN',funds:1350,players:6,bets:[]},{name:'GOLD',funds:1090,players:3,bets:[]}],
   activity:[['Sarah','joined BLUE team'],['Steve','joined BLUE team'],['Mike','joined BLUE team']]};
 const $=id=>document.getElementById(id), money=n=>'$'+n.toLocaleString();
-const sound={enabled:false,context:null,master:null};
+const sound={enabled:false,context:null,master:null,spin:null};
 function audioContext(){
   if(!sound.context){const AudioContext=window.AudioContext||window.webkitAudioContext;if(!AudioContext)return null;sound.context=new AudioContext();sound.master=sound.context.createGain();sound.master.gain.value=.22;sound.master.connect(sound.context.destination)}
   if(sound.context.state==='suspended')sound.context.resume().catch(()=>{});
   return sound.context;
 }
-function tone(ctx,frequency,start,duration,{wave='sine',volume=.3,endFrequency=null}={}){
+function tone(ctx,frequency,start,duration,{wave='sine',volume=.3,endFrequency=null,destination=sound.master}={}){
   const oscillator=ctx.createOscillator(),gain=ctx.createGain();oscillator.type=wave;oscillator.frequency.setValueAtTime(frequency,start);if(endFrequency)oscillator.frequency.exponentialRampToValueAtTime(endFrequency,start+duration);
   gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(volume,start+.008);gain.gain.exponentialRampToValueAtTime(.0001,start+duration);
-  oscillator.connect(gain);gain.connect(sound.master);oscillator.start(start);oscillator.stop(start+duration+.02);
+  oscillator.connect(gain);gain.connect(destination);oscillator.start(start);oscillator.stop(start+duration+.02);
+}
+function startSpinSound(){
+  if(!sound.enabled||sound.spin)return;const ctx=audioContext();if(!ctx)return;
+  const buffer=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate),samples=buffer.getChannelData(0);
+  for(let i=0;i<samples.length;i++)samples[i]=(Math.random()*2-1)*.6;
+  const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
+  source.buffer=buffer;source.loop=true;filter.type='bandpass';filter.frequency.value=760;filter.Q.value=.55;
+  gain.gain.setValueAtTime(.0001,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(.12,ctx.currentTime+.35);
+  source.connect(filter);filter.connect(gain);gain.connect(sound.master);source.start();
+  const spin={source,gain,tickTimer:null,startedAt:performance.now(),settleAt:null,settleDuration:0};sound.spin=spin;
+  const tick=()=>{
+    if(sound.spin!==spin||!sound.enabled)return;
+    const progress=spin.settleAt===null?0:Math.min(1,Math.max(0,(performance.now()-spin.settleAt)/spin.settleDuration));
+    const frequency=1750+Math.random()*1050;
+    tone(ctx,frequency,ctx.currentTime,.035+Math.random()*.025,{wave:'triangle',volume:.55,endFrequency:frequency*.72,destination:gain});
+    spin.tickTimer=setTimeout(tick,125+Math.random()*90+progress*(220+Math.random()*260));
+  };
+  spin.tickTimer=setTimeout(tick,100);
+}
+function decelerateSpinSound(duration){
+  const spin=sound.spin;if(!spin)return;const ctx=sound.context,now=ctx.currentTime;spin.settleAt=performance.now();spin.settleDuration=duration*1000;
+  const gain=spin.gain.gain;gain.cancelScheduledValues(now);gain.setValueAtTime(Math.max(.0001,gain.value),now);
+  gain.linearRampToValueAtTime(.025,now+duration*.78);gain.exponentialRampToValueAtTime(.0001,now+duration);
+}
+function stopSpinSound(fadeSeconds=.15){
+  const spin=sound.spin;if(!spin)return;sound.spin=null;clearTimeout(spin.tickTimer);
+  const now=sound.context.currentTime,gain=spin.gain.gain;gain.cancelScheduledValues(now);gain.setValueAtTime(Math.max(.0001,gain.value),now);gain.exponentialRampToValueAtTime(.0001,now+fadeSeconds);
+  try{spin.source.stop(now+fadeSeconds+.05)}catch{}
 }
 function playSound(effect){
   if(!sound.enabled)return;const ctx=audioContext();if(!ctx)return;const now=ctx.currentTime;
   if(effect==='chip'){tone(ctx,1900,now,.055,{wave:'triangle',volume:.24,endFrequency:1450});tone(ctx,2670,now+.018,.07,{wave:'sine',volume:.12,endFrequency:2100})}
   else if(effect==='open'){tone(ctx,660,now,.16,{wave:'sine',volume:.2});tone(ctx,880,now+.13,.2,{wave:'sine',volume:.22})}
   else if(effect==='lock'){tone(ctx,520,now,.12,{wave:'triangle',volume:.2,endFrequency:380});tone(ctx,350,now+.09,.15,{wave:'triangle',volume:.16,endFrequency:300})}
-  else if(effect==='spin'){tone(ctx,280,now,.3,{wave:'sawtooth',volume:.1,endFrequency:110});tone(ctx,420,now,.22,{wave:'triangle',volume:.08,endFrequency:180})}
+  else if(effect==='spin'){tone(ctx,280,now,.3,{wave:'sawtooth',volume:.1,endFrequency:110});tone(ctx,420,now,.22,{wave:'triangle',volume:.08,endFrequency:180});startSpinSound()}
   else if(effect==='result'){[523,659,784].forEach((frequency,index)=>tone(ctx,frequency,now+index*.11,.32,{wave:'sine',volume:.18}))}
   else if(effect==='win'){[659,784,988,1318].forEach((frequency,index)=>tone(ctx,frequency,now+index*.105,.38,{wave:'sine',volume:.2}))}
 }
-function setSoundEnabled(enabled){sound.enabled=enabled;const button=$('soundToggle');button.setAttribute('aria-pressed',String(enabled));button.setAttribute('aria-label',enabled?'Disable sound effects':'Enable sound effects');button.textContent=enabled?'SOUND ON':'SOUND OFF';if(enabled)audioContext()}
+function setSoundEnabled(enabled){sound.enabled=enabled;const button=$('soundToggle');button.setAttribute('aria-pressed',String(enabled));button.setAttribute('aria-label',enabled?'Disable sound effects':'Enable sound effects');button.textContent=enabled?'SOUND ON':'SOUND OFF';if(enabled){audioContext();if(state.status==='spinning')startSpinSound()}else stopSpinSound(.1)}
 const team=()=>state.teams[state.activeTeam];
 let heldBalanceKey=null,heldBalances=null,lastReleasedBalanceKey=null;
 const balanceKey=t=>t.id??t.name;
@@ -90,6 +118,7 @@ function settleWheel(number,resultKey){
   if(wheelMotion.resultKey===resultKey)return;
   const winningTeamExists=state.teams.some(t=>settleBets(t.bets,number)>0);
   if(!wheelMotion.spinning)startWheelSpin();
+  if(sound.enabled&&!sound.spin)startSpinSound();
   wheelMotion.resultKey=resultKey;const rotor=$('wheelRotor'),ball=$('wheelBallTrack'),badge=$('resultBadge');
   const color=colorOf(number);$('resultNum').textContent='—';$('displayNumber').textContent='—';$('displayLabel').textContent='';badge.classList.add('isPending');
   if(wheelMotion.settleTimer){clearTimeout(wheelMotion.settleTimer);wheelMotion.settleTimer=null}
@@ -121,6 +150,7 @@ function settleWheel(number,resultKey){
   const maxLap=Math.floor((maxDuration/1000*decelerationDistanceRate-phase)/360);
   const lapCount=minLap<=maxLap?minLap+Math.floor(Math.random()*(maxLap-minLap+1)):Math.max(1,Math.round((9000/1000*decelerationDistanceRate-phase)/360));
   const duration=(phase+360*lapCount)/decelerationDistanceRate;
+  decelerateSpinSound(duration);
   const wheelDelta=wheelSpeed*duration/2,ballDelta=ballSpeed*duration/ballEaseStartSlope;
   wheelMotion.landingAngle=((rotorStart+pocketTarget+wheelDelta)%360+360)%360;
   wheelMotion.wheelRotation=rotorStart+wheelDelta;
@@ -135,6 +165,7 @@ function settleWheel(number,resultKey){
     ball.style.transform=`rotate(${wheelMotion.ballRotation}deg)`;
     $('wheelInner').style.transform=`rotate(${-wheelMotion.wheelRotation}deg)`;
     if(wheelMotion.resultKey!==resultKey)return;
+    stopSpinSound(.12);
     badge.classList.toggle('isRed',color==='RED');badge.classList.toggle('isBlack',color==='BLACK');
     $('resultNum').textContent=String(number);badge.classList.remove('isPending');$('displayNumber').textContent=String(number);$('displayLabel').textContent=color;
     playSound(winningTeamExists?'win':'result');
